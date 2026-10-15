@@ -142,13 +142,21 @@ def process_bundle_data(data: dict, output_dir: str = OUTPUT_DIR) -> dict:
 class SyncHandler(BaseHTTPRequestHandler):
     def _send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def do_OPTIONS(self):
         self.send_response(200)
         self._send_cors_headers()
         self.end_headers()
+
+    def do_GET(self):
+        self.send_response(200)
+        self._send_cors_headers()
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        html = "<h3>⚡ Smart-Rec Live Sync Server is Running!</h3><p>Extension is connected and ready to sync states.</p>"
+        self.wfile.write(html.encode("utf-8"))
 
     def do_POST(self):
         if self.path == "/sync":
@@ -176,16 +184,14 @@ class SyncHandler(BaseHTTPRequestHandler):
         return  # Keep terminal output clean
 
 if __name__ == "__main__":
-    # Process any existing JSON files first
     bundles = sorted(glob.glob("smart_rec_*.json"), key=os.path.getmtime, reverse=True)
     if bundles:
         print(f"[*] Found local JSON bundle: {bundles[0]}")
         with open(bundles[0], "r", encoding="utf-8") as f:
             process_bundle_data(json.load(f))
 
-    # Start Live Sync HTTP Server
     print(f"[*] Live Sync Daemon listening on http://127.0.0.1:{PORT}/sync")
-    print("[*] Click 'Sync to Disk' or 'Patch View' inside Chrome to update project files instantly.")
+    print("[*] Ready! Click 'Sync to Disk' or 'Patch View' inside Chrome.")
     server = HTTPServer(("127.0.0.1", PORT), SyncHandler)
     try:
         server.serve_forever()
