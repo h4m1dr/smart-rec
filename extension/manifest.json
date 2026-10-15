@@ -1,10 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Smart-Rec: SPA State Mapper",
-  "version": "2.0.0",
-  "description": "Incremental React/MUI DOM, CSSOM, and API state harvester for modular cloning.",
+  "version": "3.0.0",
+  "description": "Live-sync React/MUI DOM, CSSOM, and API state harvester with instant hotfix patching.",
   "permissions": ["activeTab", "scripting", "unlimitedStorage"],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": ["<all_urls>", "http://127.0.0.1:8765/*", "http://localhost:8765/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
