@@ -14,7 +14,7 @@ An automated Chrome Extension and Local Live-Sync Daemon designed to reverse-eng
 
 ### Method 1: One-Click Launcher (Windows)
 1. Clone this repository once:
-   ```bash
+```bash
    git clone [https://github.com/YOUR_USERNAME/smart-rec.git](https://github.com/YOUR_USERNAME/smart-rec.git)
 
 ```
