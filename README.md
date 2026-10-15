@@ -31,7 +31,6 @@ An automated Chrome Extension and Local Live-Sync Daemon designed to reverse-eng
 1. Copy and paste this address into your Chrome address bar:
 ```text
 chrome://extensions
-
 ```
 
 
