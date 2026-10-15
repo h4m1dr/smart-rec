@@ -7,7 +7,7 @@
         componentsFound: []
     };
 
-    // 1. Detect Framework & Annotate React Fiber Components
+    // 1. Detect Framework & Annotate React Fiber Nodes
     function inspectFiberAndTech() {
         const rootEl = document.querySelector('#root, #app, [data-reactroot]') || document.body;
         const fiberKey = Object.keys(rootEl).find(k => k.startsWith('__reactFiber$') || k.startsWith('__reactContainer$'));
@@ -40,7 +40,7 @@
         window.postMessage({ type: "SR_TECH_UPDATE", payload: hookData }, "*");
     }
 
-    // 2. Intercept SPA Router Navigation (pushState / replaceState)
+    // 2. Intercept SPA Router Navigation
     const wrapHistory = (type) => {
         const orig = history[type];
         return function(...args) {
@@ -55,14 +55,14 @@
         window.postMessage({ type: "SR_ROUTE_CHANGE", payload: { path: location.pathname } }, "*");
     });
 
-    // 3. Intercept Fetch API Calls for Backend Schema Discovery
+    // 3. Intercept Fetch API Calls
     const origFetch = window.fetch;
     window.fetch = async function(...args) {
         const response = await origFetch.apply(this, args);
         try {
             const clone = response.clone();
             const url = typeof args[0] === 'string' ? args[0] : args[0]?.url;
-            if (url && !url.match(/\.(css|png|jpg|jpeg|svg|ico|woff|woff2|ttf)$/i)) {
+            if (url && !url.includes('127.0.0.1:8765') && !url.match(/\.(css|png|jpg|jpeg|svg|ico|woff|woff2|ttf)$/i)) {
                 clone.json().then(data => {
                     window.postMessage({
                         type: "SR_API_LOG",
