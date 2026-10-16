@@ -1,13 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Smart-Rec: SPA State Mapper",
-  "version": "3.0.0",
-  "description": "Live-sync React/MUI DOM, CSSOM, and API state harvester with instant hotfix patching.",
+  "name": "React Direct-Disk Cloner",
+  "version": "4.0.0",
+  "description": "Directly maps React/MUI apps file-by-file onto your local disk with full project awareness.",
   "permissions": ["activeTab", "scripting", "unlimitedStorage"],
-  "host_permissions": ["<all_urls>", "http://127.0.0.1:8765/*", "http://localhost:8765/*"],
-  "background": {
-    "service_worker": "background.js"
-  },
+  "host_permissions": ["<all_urls>"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
