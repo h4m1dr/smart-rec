@@ -1,10 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "React Direct-Disk Cloner",
+  "name": "Smart-Rec: React SPA Cloner",
   "version": "4.0.0",
-  "description": "Directly maps React/MUI apps file-by-file onto your local disk with full project awareness.",
-  "permissions": ["activeTab", "scripting", "unlimitedStorage"],
+  "description": "Direct-to-disk React/MUI DOM, CSSOM, Fiber & API state mapper with full file awareness.",
+  "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage"],
   "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "Smart-Rec Control Panel",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
