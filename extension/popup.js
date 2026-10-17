@@ -1,121 +1,118 @@
 let activeTab = null;
 let currentHost = "";
 
-async function sendToTab(action) {
+async function ensureContentScriptAndSend(action) {
     if (!activeTab || !activeTab.id) return null;
     try {
         return await chrome.tabs.sendMessage(activeTab.id, { action });
-    } catch (e) {
-        document.getElementById('wl-status').innerHTML = '<span style="color:#f59e0b">Please refresh (F5) this tab once!</span>';
-        return null;
+    } catch (err) {
+        // Automatically inject content.js so user NEVER sees "Please refresh F5"!
+        await chrome.runtime.sendMessage({ type: "SR_ENSURE_INJECTED", tabId: activeTab.id });
+        await new Promise(r => setTimeout(r, 350));
+        try {
+            return await chrome.tabs.sendMessage(activeTab.id, { action });
+        } catch (e2) {
+            return null;
+        }
     }
 }
 
-function renderState(state) {
-    if (!state) return;
-    document.getElementById('status-badge').textContent = state.isRunning ? 'REC' : 'READY';
-    document.getElementById('status-badge').style.background = state.isRunning ? '#ef4444' : '#10b981';
-    document.getElementById('stack-info').innerHTML = `
-        Engine: <b style="color:#38bdf8">${state.engine}</b> (${state.compCount} comps)<br>
-        Styling: <b style="color:#fff">${state.uiLib}</b> | Rules: <b>${state.cssRulesCount || 0}</b>
-    `;
-    document.getElementById('p-count').textContent = state.pagesCount || 0;
-    document.getElementById('m-count').textContent = state.modalsCount || 0;
-    document.getElementById('log').textContent = state.lastLog || 'Ready';
+function renderRegistry(registryObj) {
+    const container = document.getElementById('registry-list');
+    const hosts = Object.keys(registryObj || {});
+    if (hosts.length === 0) {
+        container.innerHTML = '<div style="color:#64748b;padding:6px;">No sites analyzed yet.</div>';
+        return;
+    }
 
-    document.getElementById('init-view').style.display = state.isRunning ? 'none' : 'block';
-    document.getElementById('active-view').style.display = state.isRunning ? 'block' : 'none';
+    container.innerHTML = hosts.map(host => {
+        const p = registryObj[host];
+        const allTech = [
+            ...(p.technologies?.frameworks || []),
+            ...(p.technologies?.uiLibraries || []),
+            ...(p.technologies?.cssEngines || []),
+            ...(p.technologies?.jsUtilities || [])
+        ];
+        const tagsHtml = allTech.map(t => `<span class="tag">${t}</span>`).join('');
+        return `
+            <div class="site-card">
+                <div>
+                    <strong style="color:#fff;">${host}</strong>
+                    <span style="color:#64748b;font-size:9px;">(${p.reactComponentsCount || 0} comps)</span><br>
+                    ${tagsHtml || '<span class="tag">Standard Web</span>'}
+                </div>
+                <button data-remove="${host}" style="background:#334155;color:#f87171;border:none;padding:3px 6px;border-radius:4px;cursor:pointer;font-size:10px;">✕</button>
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('button[data-remove]').forEach(btn => {
+        btn.onclick = async () => {
+            const h = btn.getAttribute('data-remove');
+            const store = await chrome.storage.local.get(['sitesRegistry', 'whitelistedHosts']);
+            const reg = store.sitesRegistry || {};
+            delete reg[h];
+            const wl = (store.whitelistedHosts || []).filter(x => x !== h);
+            await chrome.storage.local.set({ sitesRegistry: reg, whitelistedHosts: wl });
+            renderRegistry(reg);
+            if (h === currentHost && activeTab) {
+                chrome.tabs.sendMessage(activeTab.id, { action: "HIDE_WIDGET" }).catch(() => {});
+            }
+        };
+    });
 }
 
 async function init() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     activeTab = tab;
 
+    const store = await chrome.storage.local.get(['sitesRegistry']);
+    const reg = store.sitesRegistry || {};
+    renderRegistry(reg);
+
     if (!tab || !tab.url || !tab.url.startsWith('http')) {
-        document.getElementById('cur-domain').textContent = "Local / Browser Page";
-        document.getElementById('wl-status').textContent = "Disabled on local file:/// and chrome:// pages.";
-        document.getElementById('btn-toggle-wl').style.display = 'none';
+        document.getElementById('cur-domain').textContent = "Local / System Tab";
+        document.getElementById('btn-analyze').disabled = true;
+        document.getElementById('btn-analyze').style.opacity = "0.4";
         return;
     }
 
     currentHost = new URL(tab.url).hostname;
     document.getElementById('cur-domain').textContent = currentHost;
 
-    const store = await chrome.storage.local.get(['whitelistedHosts', 'geminiApiKey']);
-    const list = store.whitelistedHosts || [];
-    if (store.geminiApiKey) document.getElementById('api-key').value = store.geminiApiKey;
-
-    updateWhitelistUI(list);
-}
-
-async function updateWhitelistUI(list) {
-    const isEnabled = list.includes(currentHost);
-    const btn = document.getElementById('btn-toggle-wl');
-    const sec = document.getElementById('controls-section');
-    const st = document.getElementById('wl-status');
-
-    document.getElementById('wl-list').innerHTML = list.length ? list.map(h => `<div>• ${h}</div>`).join('') : 'No sites added yet.';
-
-    if (isEnabled) {
-        st.innerHTML = '<span style="color:#10b981">✅ Whitelisted & Active</span>';
-        btn.textContent = "🚫 Remove Site from Whitelist";
-        btn.style.background = "#475569";
-        btn.style.color = "#fff";
-        sec.style.display = 'block';
-        const res = await sendToTab('GET_STATE');
-        renderState(res);
-    } else {
-        st.innerHTML = '<span style="color:#94a3b8">⏸ Not active on this site</span>';
-        btn.textContent = "🔍 Analyze & Add Site to Whitelist";
-        btn.style.background = "#38bdf8";
-        btn.style.color = "#0f172a";
-        sec.style.display = 'none';
+    if (reg[currentHost]) {
+        const p = reg[currentHost];
+        document.getElementById('passport-preview').innerHTML = `✅ Passport Saved (${p.reactComponentsCount} React comps, ${p.navigationTree?.length || 0} routes)`;
     }
 }
 
-document.getElementById('btn-toggle-wl').onclick = async () => {
+document.getElementById('btn-analyze').onclick = async () => {
     if (!currentHost) return;
-    const store = await chrome.storage.local.get(['whitelistedHosts']);
-    let list = store.whitelistedHosts || [];
+    document.getElementById('passport-preview').innerHTML = '<span style="color:#38bdf8">Scanning site & opening on-page widget...</span>';
 
-    if (list.includes(currentHost)) {
-        list = list.filter(h => h !== currentHost);
-        await chrome.storage.local.set({ whitelistedHosts: list });
-        await sendToTab('DISABLE_ON_SITE');
-        updateWhitelistUI(list);
-    } else {
-        list.push(currentHost);
-        await chrome.storage.local.set({ whitelistedHosts: list });
-        const res = await sendToTab('ENABLE_AND_ANALYZE');
-        updateWhitelistUI(list);
-        renderState(res);
+    const store = await chrome.storage.local.get(['whitelistedHosts', 'sitesRegistry']);
+    const wl = new Set(store.whitelistedHosts || []);
+    wl.add(currentHost);
+    await chrome.storage.local.set({ whitelistedHosts: Array.from(wl) });
+
+    const res = await ensureContentScriptAndSend("ANALYZE_AND_SHOW_WIDGET");
+    if (res && res.passport) {
+        const reg = store.sitesRegistry || {};
+        reg[currentHost] = res.passport;
+        await chrome.storage.local.set({ sitesRegistry: reg });
+        renderRegistry(reg);
+        document.getElementById('passport-preview').innerHTML = `✅ Passport Updated! Widget is now open on the page.`;
     }
 };
 
-document.getElementById('btn-fresh').onclick = async () => {
-    await sendToTab('START_FRESH');
-    window.close();
-};
-
-document.getElementById('btn-continue').onclick = async () => {
-    await sendToTab('CONTINUE_EXISTING');
-    window.close();
-};
-
-document.getElementById('btn-save').onclick = async () => {
-    renderState(await sendToTab('SAVE_NOW'));
-};
-
-document.getElementById('btn-stop').onclick = async () => {
-    renderState(await sendToTab('STOP'));
-};
-
-document.getElementById('btn-save-key').onclick = async () => {
-    const k = document.getElementById('api-key').value.trim();
-    await chrome.storage.local.set({ geminiApiKey: k });
-    const b = document.getElementById('btn-save-key');
-    b.textContent = "✅ Saved!";
-    setTimeout(() => b.textContent = "💾 Save AI Key", 1200);
+document.getElementById('btn-export-reg').onclick = async () => {
+    const store = await chrome.storage.local.get(['sitesRegistry']);
+    const blob = new Blob([JSON.stringify(store.sitesRegistry || {}, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `smart_rec_sites_registry_backup.json`;
+    a.click();
 };
 
 document.addEventListener('DOMContentLoaded', init);
