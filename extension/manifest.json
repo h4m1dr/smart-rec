@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Smart-Rec v10.0: Pro Workspace Architect",
-  "version": "10.0.0",
-  "description": "Professional web cloner with settings hub, centralized workspace paths, registry backups and auto-sync.",
+  "name": "Smart-Rec v11.0: Ultimate AI Web Architect",
+  "version": "11.0.0",
+  "description": "Complete suite: Central workspaces, settings hub, registry backup, auto-menus explorer, auto-screenshots & built-in Gemini AI.",
   "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage", "tabs", "downloads"],
   "host_permissions": ["<all_urls>"],
   "action": {
-    "default_title": "Smart-Rec v10.0 Hub",
+    "default_title": "Smart-Rec v11.0 Hub",
     "default_popup": "popup.html"
   },
   "background": {
