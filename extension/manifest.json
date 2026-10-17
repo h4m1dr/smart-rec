@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Smart-Rec: React SPA Cloner",
-  "version": "6.0.0",
-  "description": "Whitelisted React/MUI cloner with pre-flight site analyzer, error console, offline SPA router & AI Master Bundle.",
-  "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage"],
+  "name": "Smart-Rec v7.0: AI WebUI Architect",
+  "version": "7.0.0",
+  "description": "Wappalyzer-grade site passport, PNG screenshotter, micro-element scanner & modular AI specification generator.",
+  "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage", "tabs"],
   "host_permissions": ["<all_urls>"],
   "action": {
-    "default_title": "Smart-Rec Controller",
+    "default_title": "Smart-Rec v7.0 Architect",
     "default_popup": "popup.html"
   },
   "background": {
