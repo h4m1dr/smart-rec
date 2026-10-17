@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Smart-Rec v7.0: AI WebUI Architect",
-  "version": "7.0.0",
-  "description": "Wappalyzer-grade site passport, PNG screenshotter, micro-element scanner & modular AI specification generator.",
+  "name": "Smart-Rec v8.0: Persistent AI WebUI Cloner",
+  "version": "8.0.0",
+  "description": "Persistent IndexedDB folder handle, document_start network sniffer, auto-menu explorer, auto-screenshot & built-in AI chat.",
   "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage", "tabs"],
   "host_permissions": ["<all_urls>"],
   "action": {
-    "default_title": "Smart-Rec v7.0 Architect",
+    "default_title": "Smart-Rec v8.0 Architect",
     "default_popup": "popup.html"
   },
   "background": {
@@ -16,7 +16,7 @@
     {
       "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
