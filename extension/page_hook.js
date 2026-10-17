@@ -1,111 +1,122 @@
 (function() {
-    if (window.__SMART_REC_HOOK_ACTIVE__) return;
-    window.__SMART_REC_HOOK_ACTIVE__ = true;
+    if (window.__SR_HOOK_V6__) return;
+    window.__SR_HOOK_V6__ = true;
 
-    const hookData = {
-        techStack: { framework: "Detecting...", uiLibrary: "Standard CSS" },
-        componentsFound: []
-    };
+    const apiLogs = [];
 
-    // 1. Deep React Fiber & UI Library Inspection
-    function inspectFiberAndTech() {
-        const rootEl = document.querySelector('#root, #app, [data-reactroot]') || document.body;
-        const allElements = document.querySelectorAll('*');
-        
-        let fiberDetected = !!(window.__REACT_DEVTOOLS_GLOBAL_HOOK__);
-        const compSet = new Set(hookData.componentsFound);
+    function analyzeSiteArchitecture() {
+        const audit = {
+            engine: "Standard DOM",
+            uiLib: "Standard CSS",
+            compCount: 0,
+            componentNames: [],
+            styleSheetsCount: document.styleSheets.length,
+            cssRulesCount: 0,
+            emotionTags: document.querySelectorAll('style[data-emotion]').length,
+            internalLinksCount: 0,
+            brokenImagesCount: 0,
+            errors: []
+        };
 
-        allElements.forEach(el => {
-            const fKey = Object.keys(el).find(k => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'));
-            if (fKey) {
-                fiberDetected = true;
-                let curr = el[fKey];
-                // Walk up the Fiber tree to find the nearest meaningful React Component name
-                for (let depth = 0; depth < 6 && curr; depth++) {
-                    const typeObj = curr.type;
-                    const rawName = typeof typeObj === 'function'
-                        ? (typeObj.displayName || typeObj.name)
-                        : (typeof typeObj === 'object' && typeObj !== null ? (typeObj.displayName || typeObj.render?.name) : null);
+        try {
+            const root = document.querySelector('#root, #app, [data-reactroot]') || document.body;
+            const fiberKey = Object.keys(root).find(k => k.startsWith('__reactFiber$') \vert{}\vert{} k.startsWith('__reactContainer$'));
+            const isReact = !!(fiberKey || window.__REACT_DEVTOOLS_GLOBAL_HOOK__ || document.querySelector('[class*="Mui"]'));
+            const isMUI = !!document.querySelector('[class*="Mui"], [class*="muirtl-"], [class*="css-"]');
 
-                    if (rawName && rawName.length > 2 && /^[A-Z]/.test(rawName) && !rawName.startsWith('WithStyles') && !rawName.startsWith('Styled')) {
-                        compSet.add(rawName);
-                        if (!el.hasAttribute('data-react-component')) {
-                            el.setAttribute('data-react-component', rawName);
+            if (isReact) audit.engine = "React Fiber";
+            if (isMUI) audit.uiLib = "MUI (Emotion CSSOM)";
+
+            const comps = new Set();
+            document.querySelectorAll('*').forEach(el => {
+                const fk = Object.keys(el).find(k => k.startsWith('__reactFiber$') \vert{}\vert{} k.startsWith('__reactInternalInstance$'));
+                if (fk) {
+                    let f = el[fk];
+                    for (let i = 0; i < 5 && f; i++) {
+                        const t = f.type;
+                        const name = typeof t === 'function' ? (t.displayName || t.name) : (typeof t === 'object' && t ? (t.displayName || t.render?.name) : null);
+                        if (name && name.length > 2 && /^[A-Z]/.test(name) && !name.startsWith('Styled(') && !name.startsWith('WithStyles')) {
+                            comps.add(name);
+                            el.setAttribute('data-react-component', name);
+                            break;
                         }
-                        break;
+                        f = f.return;
                     }
-                    curr = curr.return;
+                }
+            });
+
+            audit.compCount = comps.size;
+            audit.componentNames = Array.from(comps);
+
+            for (const sh of Array.from(document.styleSheets)) {
+                try {
+                    if (sh.cssRules) audit.cssRulesCount += sh.cssRules.length;
+                } catch (e) {
+                    audit.errors.push(`CORS CSS blocked: ${sh.href || 'inline'}`);
                 }
             }
-        });
 
-        if (fiberDetected || Object.keys(rootEl).some(k => k.startsWith('__reactContainer$'))) {
-            hookData.techStack.framework = "React";
-        } else if (window.__VUE__) {
-            hookData.techStack.framework = "Vue.js";
-        } else {
-            hookData.techStack.framework = "SPA / Standard DOM";
+            document.querySelectorAll('a[href]').forEach(a => {
+                const h = a.getAttribute('href');
+                if (h && h.startsWith('/')) audit.internalLinksCount++;
+            });
+
+            document.querySelectorAll('img').forEach(img => {
+                if (!img.complete || img.naturalWidth === 0) audit.brokenImagesCount++;
+            });
+
+        } catch (err) {
+            audit.errors.push(`Analyze Error: ${err.message}`);
         }
 
-        if (document.querySelector('[class*="Mui"], [class*="muirtl-"], [class*="css-"], style[data-emotion]')) {
-            hookData.techStack.uiLibrary = "Material-UI (MUI + Emotion)";
-        } else if (document.querySelector('[class*="ant-"]')) {
-            hookData.techStack.uiLibrary = "Ant Design";
-        }
-
-        hookData.componentsFound = Array.from(compSet);
-
-        window.postMessage({
-            type: "SR_TECH_UPDATE",
-            payload: {
-                techStack: hookData.techStack,
-                componentCount: hookData.componentsFound.length
-            }
-        }, "*");
+        window.postMessage({ type: "SR_V6_STATUS", payload: audit }, "*");
     }
 
-    // 2. Intercept SPA Router Navigation (React Router pushState / replaceState / popstate)
-    const wrapHistory = (method) => {
-        const orig = history[method];
+    // Intercept SPA Route Changes
+    const wrap = (m) => {
+        const orig = history[m];
         return function(...args) {
-            const rv = orig.apply(this, args);
-            window.postMessage({ type: "SR_ROUTE_CHANGE", payload: { path: location.pathname } }, "*");
-            setTimeout(inspectFiberAndTech, 300);
-            return rv;
+            const r = orig.apply(this, args);
+            window.postMessage({ type: "SR_V6_ROUTE", path: location.pathname }, "*");
+            setTimeout(analyzeSiteArchitecture, 350);
+            return r;
         };
     };
-    history.pushState = wrapHistory('pushState');
-    history.replaceState = wrapHistory('replaceState');
+    history.pushState = wrap('pushState');
+    history.replaceState = wrap('replaceState');
     window.addEventListener('popstate', () => {
-        window.postMessage({ type: "SR_ROUTE_CHANGE", payload: { path: location.pathname } }, "*");
-        setTimeout(inspectFiberAndTech, 300);
+        window.postMessage({ type: "SR_V6_ROUTE", path: location.pathname }, "*");
+        setTimeout(analyzeSiteArchitecture, 350);
     });
 
-    // 3. Intercept Fetch & XHR API Calls for Backend Schema Discovery
+    // Intercept Fetch API Requests
     const origFetch = window.fetch;
     window.fetch = async function(...args) {
-        const response = await origFetch.apply(this, args);
+        const res = await origFetch.apply(this, args);
         try {
-            const clone = response.clone();
+            const clone = res.clone();
             const url = typeof args[0] === 'string' ? args[0] : args[0]?.url;
-            if (url && !url.match(/\.(css|png|jpg|jpeg|svg|ico|woff|woff2|ttf|map)$/i)) {
+            if (url && !url.includes('generativelanguage.googleapis.com') && !url.match(/\.(css|png|jpg|jpeg|svg|ico|woff|woff2|ttf)$/i)) {
                 clone.json().then(data => {
-                    window.postMessage({
-                        type: "SR_API_LOG",
-                        payload: {
-                            method: (args[1]?.method || 'GET').toUpperCase(),
-                            url: url,
-                            path: location.pathname,
-                            timestamp: new Date().toISOString(),
-                            sampleResponse: data
-                        }
-                    }, "*");
+                    const entry = { method: (args[1]?.method || 'GET').toUpperCase(), url, path: location.pathname, sample: data };
+                    if (apiLogs.length < 150) apiLogs.push(entry);
+                    window.postMessage({ type: "SR_V6_API", payload: entry }, "*");
                 }).catch(() => {});
             }
-        } catch (err) {}
-        return response;
+        } catch (_) {}
+        return res;
     };
 
-    setTimeout(inspectFiberAndTech, 800);
-    window.addEventListener('click', () => setTimeout(inspectFiberAndTech, 350));
+    // Catch Page Runtime Errors
+    window.addEventListener('error', (e) => {
+        window.postMessage({ type: "SR_V6_ERROR", message: e.message || "Runtime script error" }, "*");
+    });
+
+    // Listen for On-Demand Re-Analyze Request
+    window.addEventListener('message', (e) => {
+        if (e.data && e.data.type === "SR_V6_TRIGGER_AUDIT") analyzeSiteArchitecture();
+    });
+
+    setTimeout(analyzeSiteArchitecture, 600);
+    window.addEventListener('click', () => setTimeout(analyzeSiteArchitecture, 400));
 })();
