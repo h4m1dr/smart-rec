@@ -19,4 +19,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         }).then(() => sendResponse({ ok: true })).catch(e => sendResponse({ ok: false, error: e.message }));
         return true;
     }
+
+    if (msg.type === "SR_DOWNLOAD_GITHUB_ZIP") {
+        const zipUrl = "https://github.com/h4m1dr/smart-rec/archive/refs/heads/main.zip";
+        chrome.downloads.download({ url: zipUrl, filename: "smart_rec_update.zip", saveAs: false }, (id) => {
+            sendResponse({ ok: !chrome.runtime.lastError, downloadId: id });
+        });
+        return true;
+    }
 });
