@@ -1,6 +1,6 @@
 (function() {
-    if (window.__SR_HOOK_V10__) return;
-    window.__SR_HOOK_V10__ = true;
+    if (window.__SR_HOOK_V11__) return;
+    window.__SR_HOOK_V11__ = true;
 
     const origFetch = window.fetch;
     window.fetch = async function(...args) {
@@ -11,7 +11,7 @@
             if (url && !url.includes('googleapis.com') && !url.match(/\.(css|png|jpg|svg|ico|woff2)$/i)) {
                 clone.json().then(data => {
                     window.postMessage({
-                        type: "SR_V10_NET",
+                        type: "SR_V11_NET",
                         payload: { method: (args[1]?.method || 'GET').toUpperCase(), url, status: res.status, route: location.pathname, sample: data }
                     }, "*");
                 }).catch(() => {});
@@ -53,13 +53,30 @@
         });
 
         window.postMessage({
-            type: "SR_V10_PASSPORT",
+            type: "SR_V11_PASSPORT",
             payload: { domain: location.hostname, title: document.title, technologies: tech, reactComponentsCount: comps.size, reactComponentNames: Array.from(comps), navigationTree: nav }
         }, "*");
     }
 
+    function scanMicro(selector) {
+        const root = (selector && document.querySelector(selector)) || document.querySelector('main, .main-body') || document.body;
+        const d = { buttons: [], inputs: [], tabs: [], tables: [] };
+        if (!root) return d;
+        root.querySelectorAll('button, [role="button"]').forEach(b => {
+            if (!b.closest('#srv11-widget')) d.buttons.push({ text: b.innerText?.trim() || 'Btn' });
+        });
+        root.querySelectorAll('input, select').forEach(i => {
+            if (!i.closest('#srv11-widget')) d.inputs.push({ ph: i.getAttribute('placeholder') || '' });
+        });
+        return d;
+    }
+
     window.addEventListener('message', e => {
-        if (e.data && e.data.type === "SR_V10_RUN_PASS") passport();
+        if (!e.data) return;
+        if (e.data.type === "SR_V11_RUN_PASS") passport();
+        if (e.data.type === "SR_V11_SCAN_MICRO") {
+            window.postMessage({ type: "SR_V11_MICRO_RES", reqId: e.data.reqId, payload: scanMicro(e.data.selector) }, "*");
+        }
     });
 
     setTimeout(passport, 800);
