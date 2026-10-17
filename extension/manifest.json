@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Smart-Rec v8.0: Persistent AI WebUI Cloner",
-  "version": "8.0.0",
-  "description": "Persistent IndexedDB folder handle, document_start network sniffer, auto-menu explorer, auto-screenshot & built-in AI chat.",
-  "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage", "tabs"],
+  "name": "Smart-Rec v10.0: Pro Workspace Architect",
+  "version": "10.0.0",
+  "description": "Professional web cloner with settings hub, centralized workspace paths, registry backups and auto-sync.",
+  "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage", "tabs", "downloads"],
   "host_permissions": ["<all_urls>"],
   "action": {
-    "default_title": "Smart-Rec v8.0 Architect",
+    "default_title": "Smart-Rec v10.0 Hub",
     "default_popup": "popup.html"
   },
   "background": {
