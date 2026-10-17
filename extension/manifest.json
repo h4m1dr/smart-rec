@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Smart-Rec: React SPA Cloner",
-  "version": "4.0.0",
-  "description": "Direct-to-disk React/MUI DOM, CSSOM, Fiber & API state mapper with full file awareness.",
+  "version": "6.0.0",
+  "description": "Whitelisted React/MUI cloner with pre-flight site analyzer, error console, offline SPA router & AI Master Bundle.",
   "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage"],
   "host_permissions": ["<all_urls>"],
   "action": {
-    "default_title": "Smart-Rec Control Panel",
+    "default_title": "Smart-Rec Controller",
     "default_popup": "popup.html"
   },
   "background": {
@@ -14,7 +14,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
