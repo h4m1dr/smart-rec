@@ -1,0 +1,26 @@
+name: Build Extension ZIP
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Zip Extension Folder
+        run: |
+          cd extension
+          zip -r ../smart-rec-extension.zip .
+      - name: Upload to Latest Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "⚡ Latest Smart-Rec Extension (Ready to Drag & Drop)"
+          files: smart-rec-extension.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
